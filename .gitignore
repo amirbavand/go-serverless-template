@@ -1,0 +1,18 @@
+# Terraform state files
+*.tfstate
+*.tfstate.*
+
+*.tfplan
+.terraform/
+/terraform.tfstate.d/
+
+bin/
+**/bin/
+.DS_Store
+.terraform.lock.hcl
+
+
+*.exe
+*.dll
+*.so
+*.dylib
