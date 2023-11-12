@@ -1,4 +1,7 @@
-1. make the apis funcations and return real 200 response
-2. add a simple logic to the apis
-3. add validation rules to open api files
+1. make the apis funcations and return real 200 response   //done
+2. add a simple logic to the apis    //done
+3. add validation rules to open api files //done
 4. orgenize open api files and prevent it from being too large by using $ref and writing apis for each service in a sperate file
+5. orgnize terraform files to be more readable and orgnized and also use for loops to reduce the code
+6. add aws cognito to the project and use it to authinticate the user
+7. add dynamodb to the project and use it to store the data

@@ -2,9 +2,28 @@ openapi: 3.0.3
 info:
   title: My API
   version: 1.0.0
+x-amazon-apigateway-request-validators:
+  all:
+    validateRequestBody: true
+    validateRequestParameters: true
 paths:
   /function1:
     post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                field1:
+                  type: string
+                field2:
+                  type: integer
+              required:
+                - field1
+                - field2
+      x-amazon-apigateway-request-validator: "all"
       x-amazon-apigateway-integration:
         uri: "arn:aws:apigateway:${region}:lambda:path/2015-03-31/functions/${function1_arn}/invocations"
         httpMethod: "POST"
@@ -12,7 +31,7 @@ paths:
         passthroughBehavior: "when_no_match"
         # ... other settings ...
       responses:
-        '200':
+        "200":
           description: OK
   /function2:
     post:
@@ -23,5 +42,5 @@ paths:
         passthroughBehavior: "when_no_match"
         # ... other settings ...
       responses:
-        '200':
+        "200":
           description: OK
