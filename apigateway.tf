@@ -1,5 +1,5 @@
 locals {
-  redendered_template = templatefile("api/example1/api-spec.yaml.tpl", {
+  redendered_template = templatefile("api/example1/api-spec.yaml", {
     function1_arn = module.example1.function1_arn.arn
     function2_arn = module.example1.function2_arn.arn
     region        = "us-east-1"
@@ -18,11 +18,14 @@ output "name" {
 
 resource "aws_api_gateway_deployment" "example" {
   rest_api_id = aws_api_gateway_rest_api.my_api.id
+  //  depends_on  = [aws_api_gateway_rest_api.my_api]
 
-  # 'triggers' can be used to redeploy the API when the configuration changes.
+
+  # Using a timestamp to ensure a new deployment on each 'terraform apply'
   triggers = {
-    redeployment = sha256(jsonencode(aws_api_gateway_rest_api.my_api.body))
+    redeployment = sha256(jsonencode("${aws_api_gateway_rest_api.my_api.body}"))
   }
+
 
   lifecycle {
     create_before_destroy = true

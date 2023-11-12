@@ -8,7 +8,13 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 )
 
-func HandleRequest(ctx context.Context, event interface{}) (string, error) {
+type Response struct {
+	StatusCode int               `json:"statusCode"`
+	Headers    map[string]string `json:"headers"`
+	Body       string            `json:"body"`
+}
+
+func HandleRequest(ctx context.Context, event interface{}) (Response, error) {
 
 	//create instance of EventToImport11
 	eventToImport11 := example1Utils.EventToImport11{}
@@ -16,8 +22,14 @@ func HandleRequest(ctx context.Context, event interface{}) (string, error) {
 	fmt.Println("eventToImport11", eventToImport11)
 
 	fmt.Println("event", event)
-
-	return "Hello world3", nil
+	//define a response object
+	response := Response{}
+	response.StatusCode = 200
+	response.Headers = map[string]string{
+		"Content-Type": "application/json",
+	}
+	response.Body = "{\"message\": \"Hello World\"}"
+	return response, nil
 }
 
 func main() {
