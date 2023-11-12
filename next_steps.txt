@@ -1,0 +1,4 @@
+1. make the apis funcations and return real 200 response
+2. add a simple logic to the apis
+3. add validation rules to open api files
+4. orgenize open api files and prevent it from being too large by using $ref and writing apis for each service in a sperate file
