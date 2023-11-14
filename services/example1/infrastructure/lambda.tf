@@ -1,107 +1,66 @@
 locals {
-  funcations_name = ["function1", "function2"]
-  services_name   = "example1"
-  function1_name  = "function1"
-  function2_name  = "function2"
-  binary_path     = "bin"
-  archive1_path   = "bin/${local.function1_name}.zip"
-  binary2_path    = "bin/${local.function2_name}"
-  archive2_path   = "bin/${local.function2_name}.zip"
+  functions = {
+    "function1" = {
+      description = "My first hello world function"
+      handler     = "function1"
+    },
+    "function2" = {
+      description = "My second hello world function"
+      handler     = "function2"
+    }
+  }
 
+  binary_path = "bin"
 }
-// build the binary for the lambda function in a specified path
-resource "null_resource" "function1_binary" {
+
+// Build the binary for the lambda functions in a specified path
+resource "null_resource" "function_binary" {
+  for_each = local.functions
+
   triggers = {
     always_run = timestamp()
-
-    #  source_files = sha256(file("${path.module}/../functions/${local.function1_name}/${local.function1_name}.go"))
+    # source_files = sha256(file("${path.module}/../functions/${each.key}/${each.key}.go"))
   }
+
   provisioner "local-exec" {
-    command = "cd ${path.module}/../functions/${local.function1_name} && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 GOFLAGS=-trimpath go build -mod=readonly -ldflags='-s -w' -o ../../../../bin/${local.function1_name} ."
+    command = "cd ${path.module}/../functions/${each.key} && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 GOFLAGS=-trimpath go build -mod=readonly -ldflags='-s -w' -o ../../../../bin/${each.key} ."
   }
 }
 
-// zip the binary, as we can use only zip files to AWS lambda
-data "archive_file" "function1_archive" {
-  depends_on = [null_resource.function1_binary]
+// Zip the binary, as AWS Lambda can use only zip files
+data "archive_file" "function_archive" {
+  for_each = local.functions
 
   type        = "zip"
-  source_file = "${local.binary_path}/${local.function1_name}"
-  output_path = local.archive1_path
+  source_file = "${local.binary_path}/${each.key}"
+  output_path = "bin/${each.key}.zip"
+  depends_on  = [null_resource.function_binary]
 }
 
-// create the lambda function from zip file
-resource "aws_lambda_function" "function1" {
-  function_name = "function1"
-  description   = "My first hello world function"
+// Create the lambda functions from zip files
+resource "aws_lambda_function" "function" {
+  for_each = local.functions
+
+  function_name = each.key
+  description   = each.value.description
   role          = aws_iam_role.lambda.arn
-  handler       = local.function1_name
+  handler       = each.value.handler
   memory_size   = 128
+  runtime       = "go1.x"
 
-  filename         = local.archive1_path
-  source_code_hash = data.archive_file.function1_archive.output_base64sha256
-
-  runtime = "go1.x"
+  filename         = "bin/${each.key}.zip"
+  source_code_hash = data.archive_file.function_archive[each.key].output_base64sha256
 }
 
-// create log group in cloudwatch to gather logs of our lambda function
+// Create log groups in CloudWatch to gather logs of our lambda functions
 resource "aws_cloudwatch_log_group" "log_group" {
-  name              = "/aws/lambda/${aws_lambda_function.function1.function_name}"
+  for_each = local.functions
+
+  name              = "/aws/lambda/${aws_lambda_function.function[each.key].function_name}"
   retention_in_days = 7
 }
 
-# Output the ARN of the Lambda function
-output "function1_arn" {
-  value = aws_lambda_function.function1
-}
-
-
-
-
-// build the binary for the lambda function2 in a specified path
-resource "null_resource" "function2_binary" {
-  triggers = {
-    always_run = timestamp()
-
-    # source_files = sha256(file("${path.module}/../functions/${local.function2_name}/${local.function2_name}.go"))
-  }
-  provisioner "local-exec" {
-    command = "cd ${path.module}/../functions/${local.function2_name} && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 GOFLAGS=-trimpath go build -mod=readonly -ldflags='-s -w' -o ../../../../bin/${local.function2_name} ."
-  }
-}
-
-
-// zip the binary, as we can use only zip files to AWS lambda
-data "archive_file" "function2_archive" {
-  depends_on = [null_resource.function2_binary]
-
-  type        = "zip"
-  source_file = "${local.binary_path}/${local.function2_name}"
-  output_path = local.archive2_path
-}
-
-
-// create the lambda function from zip file
-resource "aws_lambda_function" "function2" {
-  function_name = "function2"
-  description   = "My first hello world function"
-  role          = aws_iam_role.lambda.arn
-  handler       = local.function2_name
-  memory_size   = 128
-
-  filename         = local.archive2_path
-  source_code_hash = data.archive_file.function2_archive.output_base64sha256
-
-  runtime = "go1.x"
-}
-
-// create log group in cloudwatch to gather logs of our lambda function
-resource "aws_cloudwatch_log_group" "log_group2" {
-  name              = "/aws/lambda/${aws_lambda_function.function2.function_name}"
-  retention_in_days = 7
-}
-
-# Output the ARN of the Lambda function
-output "function2_arn" {
-  value = aws_lambda_function.function2
+// Output the ARNs of the Lambda functions
+output "function_arns" {
+  value = { for k, v in aws_lambda_function.function : k => v.arn }
 }
