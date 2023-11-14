@@ -1,18 +1,38 @@
 locals {
-  redendered_template = templatefile("api/example1/api-spec.yaml", {
-    function1_arn = module.example1.function1_arn.arn
-    function2_arn = module.example1.function2_arn.arn
-    region        = "us-east-1"
+
+  submodules = {
+    example1 = module.example1
+    // Add more submodules as needed
+
+  }
+  all_functions = flatten([
+    for submodule_name, submodule in local.submodules : [
+      for function_name, function_arn in submodule.function_arns : {
+        submodule_name = submodule_name
+        function_name  = function_name
+        function_arn   = function_arn
+      }
+    ]
+  ])
+  all_function_arns = merge([
+    for submodule_name, submodule in local.submodules : {
+      for function_name, function_arn in submodule.function_arns : function_name => function_arn
+    }
+  ]...)
+  rendered_template = templatefile("api/example1/api-spec.yaml", {
+    functions = local.all_function_arns
+    region    = "us-east-1"
   })
+
 }
 # API Gateway resource
 resource "aws_api_gateway_rest_api" "my_api" {
   name        = "MyAPI"
   description = "API Gateway"
-  body        = local.redendered_template
+  body        = local.rendered_template
 }
 output "name" {
-  value = local.redendered_template
+  value = local.rendered_template
 
 }
 
@@ -37,24 +57,13 @@ resource "aws_api_gateway_stage" "example" {
   stage_name    = "dev"
 }
 
-resource "aws_lambda_permission" "apigw1" {
-  statement_id  = "AllowAPIGatewayInvoke"
+
+resource "aws_lambda_permission" "apigw_permission" {
+  for_each = { for idx, val in local.all_functions : "${val.submodule_name}_${val.function_name}" => val }
+
+  statement_id  = "AllowAPIGatewayInvoke_${each.value.function_name}"
   action        = "lambda:InvokeFunction"
-  function_name = module.example1.function1_arn.function_name
+  function_name = each.value.function_arn
   principal     = "apigateway.amazonaws.com"
-
-  # The /*/* portion grants access from any method on any resource
-  # within the API Gateway "REST API".
-  source_arn = "${aws_api_gateway_rest_api.my_api.execution_arn}/*/*"
-}
-
-resource "aws_lambda_permission" "apigw2" {
-  statement_id  = "AllowAPIGatewayInvoke"
-  action        = "lambda:InvokeFunction"
-  function_name = module.example1.function2_arn.function_name
-  principal     = "apigateway.amazonaws.com"
-
-  # The /*/* portion grants access from any method on any resource
-  # within the API Gateway "REST API".
-  source_arn = "${aws_api_gateway_rest_api.my_api.execution_arn}/*/*"
+  source_arn    = "${aws_api_gateway_rest_api.my_api.execution_arn}/*/*"
 }
