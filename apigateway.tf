@@ -20,8 +20,9 @@ locals {
     }
   ]...)
   rendered_template = templatefile("api/example1/api-spec.yaml", {
-    functions = local.all_function_arns
-    region    = "us-east-1"
+    functions     = local.all_function_arns
+    user_pool_arn = aws_cognito_user_pool.my_pool.arn
+    region        = "us-east-1"
   })
 
 }
@@ -68,12 +69,12 @@ resource "aws_lambda_permission" "apigw_permission" {
   source_arn    = "${aws_api_gateway_rest_api.my_api.execution_arn}/*/*"
 }
 
-resource "aws_api_gateway_authorizer" "cognito_authorizer" {
-  name          = "CognitoAuthorizer"
-  type          = "COGNITO_USER_POOLS"
-  rest_api_id   = aws_api_gateway_rest_api.my_api.id
-  provider_arns = [aws_cognito_user_pool.my_pool.arn]
-}
+# resource "aws_api_gateway_authorizer" "cognito_authorizer1" {
+#   name          = "CognitoAuthorizer"
+#   type          = "COGNITO_USER_POOLS"
+#   rest_api_id   = aws_api_gateway_rest_api.my_api.id
+#   provider_arns = [aws_cognito_user_pool.my_pool.arn]
+# }
 
 resource "aws_iam_role" "admin_role" {
   name = "admin_role"

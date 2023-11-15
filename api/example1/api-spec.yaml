@@ -17,10 +17,13 @@ components:
       x-amazon-apigateway-authorizer:
         type: cognito_user_pools
         providerARNs:
-          - arn:aws:cognito-idp:{region}:{account}:userpool/{userPoolId}
+          - "${user_pool_arn}"
 paths:
   /function1:
     post:
+      security:
+        - CognitoAuthorizer: []
+
       requestBody:
         required: true
         content:
