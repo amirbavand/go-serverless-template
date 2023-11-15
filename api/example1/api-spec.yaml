@@ -6,6 +6,18 @@ x-amazon-apigateway-request-validators:
   all:
     validateRequestBody: true
     validateRequestParameters: true
+
+components:
+  securitySchemes:
+    CognitoAuthorizer: # This is the name of your authorizer
+      type: apiKey
+      name: Authorization
+      in: header
+      x-amazon-apigateway-authtype: cognito_user_pools
+      x-amazon-apigateway-authorizer:
+        type: cognito_user_pools
+        providerARNs:
+          - arn:aws:cognito-idp:{region}:{account}:userpool/{userPoolId}
 paths:
   /function1:
     post:

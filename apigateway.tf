@@ -67,3 +67,52 @@ resource "aws_lambda_permission" "apigw_permission" {
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_api_gateway_rest_api.my_api.execution_arn}/*/*"
 }
+
+resource "aws_api_gateway_authorizer" "cognito_authorizer" {
+  name          = "CognitoAuthorizer"
+  type          = "COGNITO_USER_POOLS"
+  rest_api_id   = aws_api_gateway_rest_api.my_api.id
+  provider_arns = [aws_cognito_user_pool.my_pool.arn]
+}
+
+resource "aws_iam_role" "admin_role" {
+  name = "admin_role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Action = "sts:AssumeRole",
+        Effect = "Allow",
+        Principal = {
+          Service = "cognito-idp.amazonaws.com"
+        },
+      },
+    ],
+  })
+}
+
+resource "aws_iam_policy" "admin_policy" {
+  name = "admin_policy"
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Action = [
+          "execute-api:Invoke",
+          "execute-api:ManageConnections"
+        ],
+        Effect = "Allow",
+        Resource = [
+          "${aws_api_gateway_rest_api.my_api.execution_arn}/*/*/*"
+          // This pattern allows access to all methods on all resources
+        ]
+      },
+    ],
+  })
+}
+resource "aws_iam_role_policy_attachment" "admin_attach" {
+  role       = aws_iam_role.admin_role.name
+  policy_arn = aws_iam_policy.admin_policy.arn
+}
